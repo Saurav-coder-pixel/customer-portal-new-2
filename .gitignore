@@ -1,1 +1,14 @@
 /target/
+**/dist/
+node_modules/
+**/node_modules/
+.idea/
+.classpath
+.project
+.settings/
+.metadata/
+.claude/
+.agents/
+work/
+.env
+backend/.env
