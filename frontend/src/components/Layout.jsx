@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Home, CheckSquare, Menu } from 'lucide-react';
 import crisLogo from '../assets/cris-logo.png';  /* Header CRIS branding */
-import irLogo from '../assets/rail.png';          /* Watermark background */
+import irLogo from '../assets/indian-railways-logo.png';          /* Watermark background */
 import '../styles/layout.css';
 
 export default function Layout({ currentScreen, onNavigate, children }) {
