@@ -1,0 +1,257 @@
+<main>
+    <form class="card" [ngClass]="'mode-' + activeTab" (ngSubmit)="activeTab === 'new' ? submitNew() : updateOld()">
+        <div class="card-head">
+            <div class="title-icon">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <div>
+                    <h1>Customer Registration</h1>
+                    <p *ngIf="activeTab === 'ownership'">Look up existing ownership record</p>
+                    <p *ngIf="activeTab === 'old'">Look up existing customer record</p>
+                    <p *ngIf="activeTab === 'new'">Register new customer account</p>
+                </div>
+            </div>
+            <div class="railways-banner">
+                <img src="assets/images/indian-railways-logo.png" alt="Indian Railways" />
+            </div>
+            <div class="mode-tabs">
+                <button type="button" class="mode-tab mode-tab-ownership" [class.active]="activeTab === 'ownership'" (click)="activeTab = 'ownership'">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Ownership
+                </button>
+                <button type="button" class="mode-tab mode-tab-old" [class.active]="activeTab === 'old'" (click)="activeTab = 'old'">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg> Old User
+                </button>
+                <button type="button" class="mode-tab mode-tab-new" [class.active]="activeTab === 'new'" (click)="activeTab = 'new'">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Entry
+                </button>
+            </div>
+        </div>
+        <div class="rule"></div>
+
+        <div *ngIf="newError || oldLookupError || oldUpdateError || newSuccess || oldUpdateSuccess" class="notice" [class.success]="newSuccess || oldUpdateSuccess" role="alert">
+            {{ newError || oldLookupError || oldUpdateError || newSuccess || oldUpdateSuccess }}
+        </div>
+        <div *ngIf="activeTab === 'old' && oldData" class="info-banner">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Information loaded from previous registration. You may update fields and re-upload files before submitting.
+        </div>
+
+        <!-- Main Form: 3-column grid -->
+        <div class="grid">
+            <!-- Row 1: Code | Address/Name | PAN -->
+            <div *ngIf="activeTab === 'old' || activeTab === 'ownership'" class="field" [formGroup]="oldForm">
+                <label [for]="activeTab === 'ownership' ? 'ownershipCode' : 'customerCode'">
+                    {{ activeTab === 'ownership' ? 'Ownership Code' : 'Customer Code' }} <b>*</b>
+                </label>
+                <div class="control">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                    <input
+                        [id]="activeTab === 'ownership' ? 'ownershipCode' : 'customerCode'"
+                        [placeholder]="activeTab === 'ownership' ? 'Enter ownership code' : 'Enter customer code'"
+                        [(ngModel)]="oldLookupCode"
+                        [ngModelOptions]="{standalone: true}"
+                        (blur)="lookupOld()"
+                        style="text-transform: uppercase"
+                    />
+                </div>
+            </div>
+
+            <div *ngIf="activeTab === 'new'" class="field" [formGroup]="newForm">
+                <label for="customerCode">Customer Code <b>*</b></label>
+                <div class="code-type-toggle">
+                    <button type="button" class="code-type-btn" [class.active]="activeSubTab === 'global'" (click)="activeSubTab = 'global'"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> Global Code</button>
+                    <button type="button" class="code-type-btn" [class.active]="activeSubTab === 'handling'" (click)="activeSubTab = 'handling'"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Handling Agent Code</button>
+                </div>
+                <div class="control generated-code-control">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                    <input id="customerCode" [value]="generatedCode" [disabled]="true" placeholder="AUTO-GENERATED FROM COMPANY NAME" />
+                </div>
+            </div>
+
+            <div *ngIf="activeTab === 'old'" class="field" [formGroup]="oldForm">
+                <label for="companyName">Company Name <b>*</b></label>
+                <div class="control">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M9 8h1"/><path d="M9 12h1"/><path d="M9 16h1"/><path d="M14 8h1"/><path d="M14 12h1"/><path d="M14 16h1"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/></svg>
+                    <input id="companyName" formControlName="companyName" placeholder="Enter company name" />
+                </div>
+            </div>
+
+            <div *ngIf="activeTab === 'ownership'" class="field" [formGroup]="oldForm">
+                <label for="ownershipAddress">Ownership Address <b>*</b></label>
+                <div class="control">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M9 8h1"/><path d="M9 12h1"/><path d="M9 16h1"/><path d="M14 8h1"/><path d="M14 12h1"/><path d="M14 16h1"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/></svg>
+                    <input id="ownershipAddress" formControlName="address" placeholder="Enter ownership address" />
+                </div>
+            </div>
+
+            <div *ngIf="activeTab === 'new'" class="field" [formGroup]="newForm">
+                <label for="companyName">Company Name <b>*</b></label>
+                <div class="control">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M9 8h1"/><path d="M9 12h1"/><path d="M9 16h1"/><path d="M14 8h1"/><path d="M14 12h1"/><path d="M14 16h1"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/></svg>
+                    <input id="companyName" formControlName="companyName" placeholder="Enter company name" (blur)="generateCode()" />
+                </div>
+            </div>
+
+            <div class="field pan-field" [formGroup]="activeTab === 'new' ? newForm : oldForm">
+                <label for="panNumber">PAN No. <b>*</b></label>
+                <div class="control pan-control">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <input id="panNumber" formControlName="panNumber" maxlength="10" placeholder="Enter 10-character PAN No." style="text-transform: uppercase" />
+                    <button type="button" class="pan-upload-btn" (click)="panFileInput.click()">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span class="pan-upload-label">Upload PDF</span>
+                    </button>
+                    <input #panFileInput class="hidden" type="file" accept=".pdf" (change)="onPanFileChange($event)" />
+                </div>
+            </div>
+
+            <!-- Row 2: Address | City | Pincode -->
+            <div class="field" [formGroup]="activeTab === 'new' ? newForm : oldForm">
+                <label for="address">Address <b>*</b></label>
+                <div class="control">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <input id="address" formControlName="address" placeholder="Enter complete business address" />
+                </div>
+            </div>
+            <div class="field" [formGroup]="activeTab === 'new' ? newForm : oldForm">
+                <label for="city">City <b>*</b></label>
+                <div class="control">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <input id="city" formControlName="city" placeholder="Enter city" />
+                </div>
+            </div>
+            <div class="field" [formGroup]="activeTab === 'new' ? newForm : oldForm">
+                <label for="pincode">Pincode <b>*</b></label>
+                <div class="control">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <input id="pincode" formControlName="pincode" maxlength="6" placeholder="Enter pincode" />
+                </div>
+            </div>
+
+            <!-- Row 3: Zone | Division | Email -->
+            <div class="field" [formGroup]="activeTab === 'new' ? newForm : oldForm">
+                <label for="zone">Zone <b>*</b></label>
+                <div class="control select">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    <select id="zone" formControlName="zone">
+                        <option value="">Select zone</option>
+                        <option *ngFor="let z of zones" [value]="z">{{z}}</option>
+                    </select>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+            </div>
+            <div class="field" [formGroup]="activeTab === 'new' ? newForm : oldForm">
+                <label for="operatingDivision">Division (SR.DCM/) <b>*</b></label>
+                <div class="control select">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    <select id="operatingDivision" formControlName="operatingDivision">
+                        <option value="">Select division</option>
+                        <option *ngFor="let d of divisions" [value]="d">{{d}}</option>
+                    </select>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+            </div>
+            <div class="field" [formGroup]="activeTab === 'new' ? newForm : oldForm">
+                <label for="email">Email <b>*</b></label>
+                <div class="control">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    <input id="email" type="email" formControlName="email" placeholder="Enter email address" />
+                </div>
+            </div>
+
+            <!-- Row 4: Mobile -->
+            <div class="field" [formGroup]="activeTab === 'new' ? newForm : oldForm">
+                <label for="mobile">Mobile <b>*</b></label>
+                <div class="control">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    <input id="mobile" formControlName="mobile" maxlength="10" placeholder="Enter 10-digit number" />
+                </div>
+            </div>
+        </div>
+
+        <div *ngIf="activeTab === 'ownership'" class="ownership-divider"></div>
+
+        <div *ngIf="activeTab === 'ownership'" class="gstins-container ownership-mode" [formGroup]="oldForm">
+            <div class="gstins-header">
+                <h3>Ownership Details</h3>
+            </div>
+            <div class="grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="field">
+                    <label for="ownershipPartyCode">Ownership Code <b>*</b></label>
+                    <div class="control">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                        <input id="ownershipPartyCode" placeholder="ENTER OWNERSHIP CODE" />
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="ownershipPartyAddress">Ownership Address <b>*</b></label>
+                    <div class="control">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M9 8h1"/><path d="M9 12h1"/><path d="M9 16h1"/><path d="M14 8h1"/><path d="M14 12h1"/><path d="M14 16h1"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/></svg>
+                        <input id="ownershipPartyAddress" placeholder="Enter ownership address" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div *ngIf="activeTab !== 'ownership'" class="gstins-container">
+            <div class="gstins-header">
+                <h3>State-wise GSTINs</h3>
+                <button type="button" class="add-gstin-btn" (click)="addGstin()">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add GSTIN
+                </button>
+            </div>
+            
+            <div class="gstin-grid" [formGroup]="activeTab === 'new' ? newForm : oldForm">
+                <ng-container formArrayName="gstins">
+                    <div class="gstin-card" *ngFor="let g of gstinsArray.controls; let i=index" [formGroupName]="i">
+                        <div class="gstin-card-head">
+                            <h4>GSTIN {{ i + 1 }}</h4>
+                            <button *ngIf="gstinsArray.length > 1" type="button" class="remove-btn" (click)="removeGstin(i)">
+                                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remove
+                            </button>
+                        </div>
+                        <div class="grid">
+                            <div class="field">
+                                <label>State <b>*</b></label>
+                                <div class="control select">
+                                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                    <select formControlName="state" style="pointer-events: none; background: #f8fafc; color: #94a3b8;">
+                                        <option value="">Select state</option>
+                                        <option [value]="g.get('state')?.value">{{ g.get('state')?.value || 'Auto-filled' }}</option>
+                                    </select>
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label>GSTIN No. <b>*</b></label>
+                                <div class="control gstin-control">
+                                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                                    <input formControlName="gstinNumber" maxlength="15" placeholder="Enter GSTIN" style="text-transform: uppercase" />
+                                    <button type="button" class="gstin-upload-btn pan-upload-btn" (click)="gstinFileInputs.click()">
+                                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                        <span class="pan-upload-label">Upload</span>
+                                    </button>
+                                    <input #gstinFileInputs class="hidden" type="file" accept=".pdf" (change)="onGstinFileChange(i, $event)" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </ng-container>
+            </div>
+        </div>
+
+        <div class="actions">
+            <div class="secure">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                256 bit encryption
+            </div>
+            <div>
+                <button type="button" class="reset" (click)="activeTab === 'new' ? newForm.reset() : oldForm.reset()">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg> Reset
+                </button>
+                <button type="submit" class="submit" [disabled]="activeTab === 'new' ? newLoading : oldUpdateLoading">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    {{ (activeTab === 'new' ? newLoading : oldUpdateLoading) ? 'Submitting...' : 'Submit Request' }}
+                </button>
+            </div>
+        </div>
+    </form>
+</main>

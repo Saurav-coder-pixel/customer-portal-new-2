@@ -59,4 +59,27 @@ public class DbaEmailService {
             e.printStackTrace();
         }
     }
+
+    /**
+     * Generic audit notification for document uploads (PAN / GSTIN).
+     * Non-fatal: failures are logged but never propagated to the caller.
+     */
+    public void sendGenericAudit(String operation, String table, String code, String detail) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(dbaEmail);
+            message.setSubject("Customer Portal Audit: " + operation);
+            message.setText(
+                "Operation : " + operation + "\n" +
+                "Table     : " + table + "\n" +
+                "Code      : " + code + "\n" +
+                "Detail    : " + detail + "\n\n" +
+                "Regards,\nCustomer Registration Portal"
+            );
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("[AUDIT EMAIL] Failed to send generic audit for " + operation + ": " + e.getMessage());
+        }
+    }
 }

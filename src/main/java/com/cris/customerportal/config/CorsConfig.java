@@ -1,3 +1,23 @@
 package com.cris.customerportal.config;
-import org.springframework.context.annotation.*; import org.springframework.web.servlet.config.annotation.*;
-@Configuration public class CorsConfig implements WebMvcConfigurer { @Override public void addCorsMappings(CorsRegistry r){r.addMapping("/api/**").allowedOrigins("http://localhost:5173").allowedMethods("GET","POST").allowedHeaders("*");} }
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+/**
+ * Global CORS configuration.
+ * Allows all origins to support both the legacy React dev server (5173)
+ * and the new Angular dev server (4200) without hardcoding ports.
+ */
+@Configuration
+public class CorsConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/api/**")
+                .allowedOriginPatterns("*")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(false);
+    }
+}

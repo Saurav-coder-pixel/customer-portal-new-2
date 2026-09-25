@@ -1,0 +1,86 @@
+<div class="login-app">
+  <header class="login-header">
+    <div class="login-brand">
+      <div class="login-cris">
+        <img src="assets/images/cris-logo.png" alt="CRIS" />
+      </div>
+    </div>
+    <span class="login-title">Login Page</span>
+    <div class="login-cris">
+      <img src="assets/images/cris-logo.png" alt="CRIS" />
+    </div>
+  </header>
+
+  <main class="login-main">
+    <div class="login-card">
+      <div class="login-card-head">
+        <div class="login-railways-banner">
+          <img src="assets/images/indian-railways-logo.png" alt="Indian Railways" />
+        </div>
+      </div>
+      <div class="login-rule"></div>
+
+      <div *ngIf="error" class="login-error-banner">
+        <span>{{ error }}</span>
+      </div>
+
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-grid" autocomplete="off">
+        <!-- Username -->
+        <div class="login-field-wrap">
+          <label for="login-user">Username <b>*</b></label>
+          <div class="login-control">
+            <input id="login-user" type="text" placeholder="Enter UserName"
+              formControlName="username" autofocus />
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="login-field-wrap">
+          <label for="login-pass">Password <b>*</b></label>
+          <div class="login-control">
+            <input id="login-pass" [type]="showPassword ? 'text' : 'password'"
+              placeholder="Enter Password" formControlName="password" />
+            <button type="button" class="login-pw-toggle" (click)="togglePassword()"
+              [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">
+              {{ showPassword ? '&#128584;' : '&#128065;' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Captcha input -->
+        <div class="login-field-wrap">
+          <label for="login-captcha">Enter Captcha <b>*</b></label>
+          <div class="login-control">
+            <input id="login-captcha" type="text" placeholder="Enter Captcha"
+              formControlName="captchaInput" autocomplete="off" />
+          </div>
+        </div>
+
+        <!-- Captcha canvas -->
+        <div class="login-captcha-row">
+          <canvas #captchaCanvas width="150" height="40" class="login-captcha-canvas"></canvas>
+          <button type="button" class="login-captcha-refresh" (click)="refreshCaptcha()" aria-label="Refresh captcha">
+            &#8635;
+          </button>
+        </div>
+
+        <!-- Actions -->
+        <div class="login-actions">
+          <div class="login-secure">&#128274; Secure encrypted login</div>
+          <div class="login-btns">
+            <button type="submit" class="login-submit" [disabled]="loading">
+              {{ loading ? 'Signing in...' : 'Login' }}
+            </button>
+            <button type="button" class="login-reset" (click)="navigateSignUp()" [disabled]="loading">
+              Sign Up
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <footer class="login-footer">
+    Designed and Developed By <strong>CENTRE FOR RAILWAY INFORMATION SYSTEMS</strong> Chanakyapuri, New Delhi-110021
+  </footer>
+</div>

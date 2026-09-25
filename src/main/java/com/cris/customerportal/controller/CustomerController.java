@@ -25,7 +25,19 @@ public class CustomerController { private final CustomerService service; public 
 
  @PostMapping("/new-generate-code")
  public Map<String,Object> newGenerateCode(@RequestParam String type, @RequestBody Map<String, String> payload) {
-  return Map.of("code", service.generateUniqueCodeJDBC(payload.get("companyName"), type), "available", true);
+  String companyName = payload.get("companyName");
+  String code = service.generateUniqueCodeJDBC(companyName, type);
+  // cleanedName: strip non-alpha, uppercase (mirrors Node's stripCorporateSuffixes result)
+  String cleanedName = companyName != null
+          ? companyName.toUpperCase().replaceAll("[^A-Z0-9 ]", " ").replaceAll("\\s+", " ").trim()
+          : "";
+  return Map.of(
+   "code",        code,
+   "available",   true,
+   "codeType",    type,
+   "cleanedName", cleanedName,
+   "maxLength",   4
+  );
  }
 
  @PostMapping(value="/new-register", consumes=MediaType.MULTIPART_FORM_DATA_VALUE)
