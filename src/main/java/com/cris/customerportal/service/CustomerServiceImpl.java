@@ -97,7 +97,7 @@ public class CustomerServiceImpl implements CustomerService {
  }
 
   public com.cris.customerportal.dto.OldCustomerResponse lookupOldCustomerByCode(String customerCode) {
-     String sql = "SELECT MAVGLBLCUSTCODE, MAVGLBLCUSTNAME, MAVGLBLCUSTADDRTEXT, MAVCUSTPANNUMB, MAVCUSTGSTNUMB, MAVGNBLCUSTCITYNAME, MADIMPLDATE FROM MEMGLBLCUST WHERE MAVGLBLCUSTCODE = ?";
+    String sql = "SELECT MAVGLBLCUSTCODE, MAVGLBLCUSTNAME, MAVGLBLCUSTADDRTEXT, MAVCUSTPANNUMB, MAVCUSTGSTNUMB, MAVGNBLCUSTCITYNAME, TO_CHAR(MADEDMNDDATE, 'DD-MM-YYYY') AS MADEDMNDDATE_TEXT FROM MEMGLBLCUST WHERE MAVGLBLCUSTCODE = ?";
     try (Connection conn = dataSource.getConnection();
        PreparedStatement ps = conn.prepareStatement(sql)) {
    ps.setString(1, customerCode == null ? null : customerCode.trim().toUpperCase(Locale.ROOT));
@@ -109,11 +109,12 @@ public class CustomerServiceImpl implements CustomerService {
      response.setAddress(rs.getString("MAVGLBLCUSTADDRTEXT"));
      response.setPanNumber(rs.getString("MAVCUSTPANNUMB"));
      response.setGstinNumbers(rs.getString("MAVCUSTGSTNUMB"));
+    response.setCity(rs.getString("MAVGNBLCUSTCITYNAME"));
      response.setCity(rs.getString("MAVGNBLCUSTCITYNAME"));
      
-     java.sql.Timestamp ts = rs.getTimestamp("MADIMPLDATE");
-     if (ts != null) {
-         response.setCreationDate(new java.text.SimpleDateFormat("dd-MM-yyyy").format(new java.util.Date(ts.getTime())));
+     String amendmentDate = rs.getString("MADEDMNDDATE_TEXT");
+     if (amendmentDate != null && !amendmentDate.isBlank()) {
+         response.setCreationDate(amendmentDate);
      }
      
      return response;
@@ -128,7 +129,7 @@ public class CustomerServiceImpl implements CustomerService {
  }
 
   public java.util.List<com.cris.customerportal.dto.OldCustomerResponse> lookupOldCustomerByGstin(String gstin) {
-     String sql = "SELECT MAVGLBLCUSTCODE, MAVGLBLCUSTNAME, MAVGLBLCUSTADDRTEXT, MAVCUSTPANNUMB, MAVCUSTGSTNUMB, MAVGNBLCUSTCITYNAME, MADIMPLDATE FROM MEMGLBLCUST WHERE MAVCUSTGSTNUMB LIKE ?";
+    String sql = "SELECT MAVGLBLCUSTCODE, MAVGLBLCUSTNAME, MAVGLBLCUSTADDRTEXT, MAVCUSTPANNUMB, MAVCUSTGSTNUMB, MAVGNBLCUSTCITYNAME, TO_CHAR(MADEDMNDDATE, 'DD-MM-YYYY') AS MADEDMNDDATE_TEXT FROM MEMGLBLCUST WHERE MAVCUSTGSTNUMB LIKE ?";
   try (Connection conn = dataSource.getConnection();
        PreparedStatement ps = conn.prepareStatement(sql)) {
    ps.setString(1, "%" + gstin + "%");
@@ -141,11 +142,12 @@ public class CustomerServiceImpl implements CustomerService {
      response.setAddress(rs.getString("MAVGLBLCUSTADDRTEXT"));
      response.setPanNumber(rs.getString("MAVCUSTPANNUMB"));
      response.setGstinNumbers(rs.getString("MAVCUSTGSTNUMB"));
+    response.setCity(rs.getString("MAVGNBLCUSTCITYNAME"));
      response.setCity(rs.getString("MAVGNBLCUSTCITYNAME"));
      
-     java.sql.Timestamp ts = rs.getTimestamp("MADIMPLDATE");
-     if (ts != null) {
-         response.setCreationDate(new java.text.SimpleDateFormat("dd-MM-yyyy").format(new java.util.Date(ts.getTime())));
+     String amendmentDate = rs.getString("MADEDMNDDATE_TEXT");
+     if (amendmentDate != null && !amendmentDate.isBlank()) {
+         response.setCreationDate(amendmentDate);
      }
      
      responses.add(response);
@@ -237,8 +239,8 @@ public class CustomerServiceImpl implements CustomerService {
   String cityCol = "global".equals(type) ? "MAVGNBLCUSTCITYNAME" : "MAVHNDGAGNTCITYNAME";
   String panCol = "global".equals(type) ? "MAVCUSTPANNUMB" : null;
   String sql = "global".equals(type) 
-      ? "INSERT INTO " + tableName + " (" + colName + ", " + nameCol + ", " + addrCol + ", " + cityCol + ", MAVCUSTGSTNUMB, " + panCol + ") VALUES (?, ?, ?, ?, ?, ?)"
-      : "INSERT INTO " + tableName + " (" + colName + ", " + nameCol + ", " + addrCol + ", " + cityCol + ") VALUES (?, ?, ?, ?)";
+      ? "INSERT INTO " + tableName + " (" + colName + ", " + nameCol + ", " + addrCol + ", " + cityCol + ", MAVCUSTGSTNUMB, " + panCol + ", MADEDMNDDATE) VALUES (?, ?, ?, ?, ?, ?, SYSDATE)"
+      : "INSERT INTO " + tableName + " (" + colName + ", " + nameCol + ", " + addrCol + ", " + cityCol + ", MADEDMNDDATE) VALUES (?, ?, ?, ?, SYSDATE)";
 
     String companyName = firstValue(formData, "companyName", "customerName");
     String providedCode = firstValue(formData, "customerCode", "globalCustomerCode", "handlingAgentCode");
@@ -282,7 +284,7 @@ public class CustomerServiceImpl implements CustomerService {
                     "NULL, NULL, SYSDATE, " +
                     formatSqlValue(formData.get("operatingDivision")) + ", NULL, " +
                     formatSqlValue(formData.get("gstinNumbers")) + ", " +
-                    formatSqlValue(formData.get("panNumber")) + ");";
+                    formatSqlValue(formData.get("panNumber")) + ", SYSDATE);";
             } else {
                 sqlQuery = "INSERT INTO MEMGLBLHNDGAGNT VALUES (" +
                     formatSqlValue(finalCodeForEmail) + ", " +
@@ -290,7 +292,7 @@ public class CustomerServiceImpl implements CustomerService {
                     formatSqlValue(formData.get("address")) + ", " +
                     formatSqlValue(formData.get("city")) + ", " +
                     "NULL, NULL, SYSDATE, " +
-                    formatSqlValue(formData.get("operatingDivision")) + ", NULL);";
+                    formatSqlValue(formData.get("operatingDivision")) + ", NULL, SYSDATE);";
             }
 
 
@@ -421,8 +423,242 @@ public class CustomerServiceImpl implements CustomerService {
   }
  }
 
+
+ // ===== Ownership: MEMWGONOWNRSHIP =====
+
+ public java.util.Map<String, String> lookupGlobalCustomerForOwnership(String ownershipCode) {
+  String sql = "SELECT MAVGLBLCUSTCODE, MAVGLBLCUSTNAME FROM MEMGLBLCUST WHERE MAVGLBLCUSTCODE = ?";
+  try (Connection conn = dataSource.getConnection();
+       PreparedStatement ps = conn.prepareStatement(sql)) {
+   ps.setString(1, ownershipCode == null ? null : ownershipCode.trim().toUpperCase(Locale.ROOT));
+   try (ResultSet rs = ps.executeQuery()) {
+    if (rs.next()) {
+     java.util.Map<String, String> result = new java.util.LinkedHashMap<>();
+     result.put("ownershipCode", rs.getString("MAVGLBLCUSTCODE"));
+     result.put("ownershipDesc", rs.getString("MAVGLBLCUSTNAME"));
+     return result;
+    }
+    return null;
+   }
+  } catch (SQLException e) {
+   System.err.printf("[DB ERROR] lookupGlobalCustomerForOwnership SQLState=%s ErrorCode=%d Message=%s%n", e.getSQLState(), e.getErrorCode(), e.getMessage());
+   throw new RuntimeException("Database error while looking up global customer code: " + e.getMessage(), e);
+  }
+ }
+
+ public java.util.Map<String, String> lookupOwnershipJDBC(String ownershipCode) {
+  String sql = "SELECT MAVWGONOWNRSHIPCODE, MAVWGONOWNRSHIPDESC FROM MEMWGONOWNRSHIP WHERE MAVWGONOWNRSHIPCODE = ?";
+  try (Connection conn = dataSource.getConnection();
+       PreparedStatement ps = conn.prepareStatement(sql)) {
+   ps.setString(1, ownershipCode == null ? null : ownershipCode.trim().toUpperCase(Locale.ROOT));
+   try (ResultSet rs = ps.executeQuery()) {
+    if (rs.next()) {
+     java.util.Map<String, String> result = new java.util.LinkedHashMap<>();
+     result.put("ownershipCode", rs.getString("MAVWGONOWNRSHIPCODE"));
+     result.put("ownershipDesc", rs.getString("MAVWGONOWNRSHIPDESC"));
+     return result;
+    } else {
+     return null; // Code not found — caller handles null as "new record"
+    }
+   }
+  } catch (SQLException e) {
+   System.err.printf("[DB ERROR] lookupOwnershipJDBC SQLState=%s ErrorCode=%d Message=%s%n", e.getSQLState(), e.getErrorCode(), e.getMessage());
+   throw new RuntimeException("Database error while looking up ownership code: " + e.getMessage(), e);
+  }
+ }
+
+ public void saveOwnershipJDBC(String ownershipCode, String ownershipDesc) {
+  String normalizedCode = ownershipCode == null ? null : ownershipCode.trim().toUpperCase(Locale.ROOT);
+  // Check existence first
+  java.util.Map<String, String> existing = lookupOwnershipJDBC(normalizedCode);
+  if (existing != null) {
+   // UPDATE
+   String sql = "UPDATE MEMWGONOWNRSHIP SET MAVWGONOWNRSHIPDESC = ? WHERE MAVWGONOWNRSHIPCODE = ?";
+   try (Connection conn = dataSource.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql)) {
+    ps.setString(1, ownershipDesc);
+    ps.setString(2, normalizedCode);
+    ps.executeUpdate();
+    String auditSql = "UPDATE MEMWGONOWNRSHIP SET MAVWGONOWNRSHIPDESC = " + formatSqlValue(ownershipDesc) + " WHERE MAVWGONOWNRSHIPCODE = " + formatSqlValue(normalizedCode) + ";";
+    sendOwnershipAuditEmail("UPDATE", "MEMWGONOWNRSHIP", normalizedCode, ownershipDesc, auditSql);
+   } catch (SQLException e) {
+    System.err.printf("[DB ERROR] saveOwnershipJDBC UPDATE SQLState=%s ErrorCode=%d Message=%s%n", e.getSQLState(), e.getErrorCode(), e.getMessage());
+    throw new RuntimeException("Database error while updating ownership record: " + e.getMessage(), e);
+   }
+  } else {
+    String sql = "INSERT INTO MEMWGONOWNRSHIP (MAVWGONOWNRSHIPCODE, MAVWGONOWNRSHIPDESC, MACPRVTPRTYCODE) VALUES (?, ?, 'Y')";
+   try (Connection conn = dataSource.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql)) {
+    ps.setString(1, normalizedCode);
+    ps.setString(2, ownershipDesc);
+    ps.executeUpdate();
+    String auditSql = "INSERT INTO MEMWGONOWNRSHIP VALUES (" + formatSqlValue(normalizedCode) + "," + formatSqlValue(ownershipDesc) + ",'Y',NULL,SYSDATE,NULL);";
+    sendOwnershipAuditEmail("INSERT", "MEMWGONOWNRSHIP", normalizedCode, ownershipDesc, auditSql);
+   } catch (SQLException e) {
+    System.err.printf("[DB ERROR] saveOwnershipJDBC INSERT SQLState=%s ErrorCode=%d Message=%s%n", e.getSQLState(), e.getErrorCode(), e.getMessage());
+    throw new RuntimeException("Database error while inserting ownership record: " + e.getMessage(), e);
+   }
+  }
+ }
+
+ // ===== Ownership Party: MEMWGONOWNRPRTY =====
+
+ public java.util.Map<String, String> lookupGlobalCustomerForOwnershipParty(String partyCode) {
+  String sql = "SELECT MAVGLBLCUSTCODE, MAVGLBLCUSTNAME FROM MEMGLBLCUST WHERE MAVGLBLCUSTCODE = ?";
+  try (Connection conn = dataSource.getConnection();
+       PreparedStatement ps = conn.prepareStatement(sql)) {
+   ps.setString(1, partyCode == null ? null : partyCode.trim().toUpperCase(Locale.ROOT));
+   try (ResultSet rs = ps.executeQuery()) {
+    if (rs.next()) {
+     java.util.Map<String, String> result = new java.util.LinkedHashMap<>();
+     result.put("partyCode", rs.getString("MAVGLBLCUSTCODE"));
+     result.put("partyDesc", rs.getString("MAVGLBLCUSTNAME"));
+     return result;
+    }
+    return null;
+   }
+  } catch (SQLException e) {
+   System.err.printf("[DB ERROR] lookupGlobalCustomerForOwnershipParty SQLState=%s ErrorCode=%d Message=%s%n", e.getSQLState(), e.getErrorCode(), e.getMessage());
+   throw new RuntimeException("Database error while looking up global customer code: " + e.getMessage(), e);
+  }
+ }
+
+ public java.util.Map<String, String> lookupOwnershipPartyJDBC(String partyCode) {
+  String sql = "SELECT MAVWGONOWNRPRTYCODE, MAVWGONOWNRPRTYDESC FROM MEMWGONOWNRPRTY WHERE MAVWGONOWNRPRTYCODE = ?";
+  try (Connection conn = dataSource.getConnection();
+       PreparedStatement ps = conn.prepareStatement(sql)) {
+   ps.setString(1, partyCode == null ? null : partyCode.trim().toUpperCase(Locale.ROOT));
+   try (ResultSet rs = ps.executeQuery()) {
+    if (rs.next()) {
+     java.util.Map<String, String> result = new java.util.LinkedHashMap<>();
+     result.put("partyCode", rs.getString("MAVWGONOWNRPRTYCODE"));
+     result.put("partyDesc", rs.getString("MAVWGONOWNRPRTYDESC"));
+     return result;
+    } else {
+     return null; // Code not found — caller handles null as "new record"
+    }
+   }
+  } catch (SQLException e) {
+   System.err.printf("[DB ERROR] lookupOwnershipPartyJDBC SQLState=%s ErrorCode=%d Message=%s%n", e.getSQLState(), e.getErrorCode(), e.getMessage());
+   throw new RuntimeException("Database error while looking up ownership party code: " + e.getMessage(), e);
+  }
+ }
+
+ public void saveOwnershipPartyJDBC(String partyCode, String partyDesc) {
+  String normalizedCode = partyCode == null ? null : partyCode.trim().toUpperCase(Locale.ROOT);
+  // Check existence first
+  java.util.Map<String, String> existing = lookupOwnershipPartyJDBC(normalizedCode);
+  if (existing != null) {
+   // UPDATE
+   String sql = "UPDATE MEMWGONOWNRPRTY SET MAVWGONOWNRPRTYDESC = ? WHERE MAVWGONOWNRPRTYCODE = ?";
+   try (Connection conn = dataSource.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql)) {
+    ps.setString(1, partyDesc);
+    ps.setString(2, normalizedCode);
+    ps.executeUpdate();
+    String auditSql = "UPDATE MEMWGONOWNRPRTY SET MAVWGONOWNRPRTYDESC = " + formatSqlValue(partyDesc) + " WHERE MAVWGONOWNRPRTYCODE = " + formatSqlValue(normalizedCode) + ";";
+    sendOwnershipAuditEmail("UPDATE", "MEMWGONOWNRPRTY", normalizedCode, partyDesc, auditSql);
+   } catch (SQLException e) {
+    System.err.printf("[DB ERROR] saveOwnershipPartyJDBC UPDATE SQLState=%s ErrorCode=%d Message=%s%n", e.getSQLState(), e.getErrorCode(), e.getMessage());
+    throw new RuntimeException("Database error while updating ownership party record: " + e.getMessage(), e);
+   }
+  } else {
+   // INSERT
+   String sql = "INSERT INTO MEMWGONOWNRPRTY (MAVWGONOWNRPRTYCODE, MAVWGONOWNRPRTYDESC) VALUES (?, ?)";
+   try (Connection conn = dataSource.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql)) {
+    ps.setString(1, normalizedCode);
+    ps.setString(2, partyDesc);
+    ps.executeUpdate();
+    String auditSql = "INSERT INTO MEMWGONOWNRPRTY VALUES (" + formatSqlValue(normalizedCode) + "," + formatSqlValue(partyDesc) + ");";
+    sendOwnershipAuditEmail("INSERT", "MEMWGONOWNRPRTY", normalizedCode, partyDesc, auditSql);
+   } catch (SQLException e) {
+    System.err.printf("[DB ERROR] saveOwnershipPartyJDBC INSERT SQLState=%s ErrorCode=%d Message=%s%n", e.getSQLState(), e.getErrorCode(), e.getMessage());
+    throw new RuntimeException("Database error while inserting ownership party record: " + e.getMessage(), e);
+   }
+  }
+ }
+
+ private void sendOwnershipAuditEmail(String operation, String table, String code, String description, String sql) {
+  DatabaseOperationAudit audit = new DatabaseOperationAudit();
+  audit.setOperationType(operation);
+  audit.setPageName("Ownership");
+  audit.setTableName(table);
+  audit.setCustomerCode(code);
+  audit.setCompanyName(description);
+  audit.setSqlStatement(sql);
+  audit.setRowsAffected(1);
+  audit.addParameter(1, "CODE", code);
+  audit.addParameter(2, "DESCRIPTION", description);
+  dbaEmailService.sendDbaAuditEmail(audit);
+ }
+
  private String formatSqlValue(String value) {
   if (value == null || value.trim().isEmpty() || "null".equalsIgnoreCase(value)) return "NULL";
   return "'" + value.replace("'", "''") + "'";
+ }
+
+  public com.cris.customerportal.dto.OldCustomerResponse lookupOwnershipCustomerByCode(String customerCode) {
+     // TODO: exact mapping not provided, using MEMWGONOWNRSHIP and placeholder columns to deliberately throw a mapping error
+     // as requested: "Keep the database mapping isolated and clearly identify what needs to be mapped."
+     String sql = "SELECT TODO_MAP_OWNERSHIP_CODE AS MAVGLBLCUSTCODE, TODO_MAP_OWNERSHIP_ADDR AS MAVGLBLCUSTNAME, 'N/A' AS MAVGLBLCUSTADDRTEXT, 'N/A' AS MAVCUSTPANNUMB, 'N/A' AS MAVCUSTGSTNUMB, 'N/A' AS MAVGNBLCUSTCITYNAME, NULL AS MADIMPLDATE FROM MEMWGONOWNRSHIP WHERE TODO_MAP_OWNERSHIP_CODE = ?";
+    try (Connection conn = dataSource.getConnection();
+       PreparedStatement ps = conn.prepareStatement(sql)) {
+   ps.setString(1, customerCode == null ? null : customerCode.trim().toUpperCase(Locale.ROOT));
+   try (ResultSet rs = ps.executeQuery()) {
+    if (rs.next()) {
+     com.cris.customerportal.dto.OldCustomerResponse response = new com.cris.customerportal.dto.OldCustomerResponse();
+     response.setCustomerCode(rs.getString("MAVGLBLCUSTCODE"));
+     response.setCompanyName(rs.getString("MAVGLBLCUSTNAME"));
+     return response;
+    } else {
+     throw new ResourceNotFoundException("No record found for this Ownership Code.");
+    }
+   }
+  } catch (SQLException e) {
+     System.err.printf("[DB ERROR] lookupOwnershipCustomerByCode SQLState=%s ErrorCode=%d Message=%s%n", e.getSQLState(), e.getErrorCode(), e.getMessage());
+   throw new RuntimeException("Database mapping error: Ownership columns must be mapped in SQL before this function can execute.", e);
+  }
+ }
+
+ public void updateOwnershipCustomerJDBC(java.util.Map<String, String> formData) {
+     // TODO: exact mapping not provided, using placeholder columns to deliberately throw a mapping error
+     String sql = "UPDATE MEMWGONOWNRSHIP SET TODO_MAP_OWNERSHIP_ADDR = ? WHERE TODO_MAP_OWNERSHIP_CODE = ?";
+  try (Connection conn = dataSource.getConnection();
+       PreparedStatement ps = conn.prepareStatement(sql)) {
+   ps.setString(1, formData.get("companyName")); // Ownership address
+   ps.setString(2, formData.get("customerCode"));
+   ps.executeUpdate();
+   
+   // Send UPDATE audit email asynchronously
+   java.util.concurrent.CompletableFuture.runAsync(() -> {
+       try {
+           org.springframework.mail.SimpleMailMessage message = new org.springframework.mail.SimpleMailMessage();
+           message.setFrom(auditFromEmail);
+           message.setTo("sura767848@gmail.com");
+           message.setSubject("Ownership Database UPDATE - " + formData.get("customerCode"));
+           
+           String sqlQuery = "UPDATE MEMWGONOWNRSHIP\nSET\n" +
+               "    TODO_MAP_OWNERSHIP_ADDR = " + formatSqlValue(formData.get("companyName")) + "\n" +
+               "WHERE TODO_MAP_OWNERSHIP_CODE = " + formatSqlValue(formData.get("customerCode")) + ";";
+                   
+           String text = "Operation: UPDATE\n" +
+                   "Table: MEMWGONOWNRSHIP\n" +
+                   "Code: " + formData.get("customerCode") + "\n\n" +
+                   "SQL QUERY:\n" +
+                   "----------------------------------------\n" +
+                   sqlQuery + "\n" +
+                   "----------------------------------------";
+                  
+           message.setText(text);
+           mailSender.send(message);
+           System.out.println("[EMAIL AUDIT] Email sent successfully for UPDATE " + formData.get("customerCode"));
+       } catch (Exception ex) {
+           System.err.println("[EMAIL AUDIT] Failed to send email: " + ex.getMessage());
+       }
+   });
+  } catch (SQLException e) {
+   throw new RuntimeException("Database mapping error: Ownership columns must be mapped in SQL before this update can execute.", e);
+  }
  }
 }
